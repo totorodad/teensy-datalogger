@@ -12,13 +12,13 @@
   COUNT_SCL        I2C       NA        19     SCL        OUT           External 24-bit I2C counter I2C clock (Part# S-35770)
   flywheel_count   I2C       3-Bytes   NA     READ       NA            Count value from the S-35770 Counter read via I2C 
  	L_COUNT_REST     DIGITAL   NA        2      DOUT2      OUT           External 24-Bit I2C counter /RST (Part# S-35770)
-  START_SIG        DIGITAL   1-Byte    0      DIN0       IN            Starter +Coil voltage signal (High = Starter Cranking)
+  START_SIG        DIGITAL   1-Byte    0      DIN0       IN            WHEEL +Coil voltage signal (High = WHEEL Cranking)
   FLYWHEEL_DIR     DIGITAL   1-Byte    1      DIN1       IN            Flyshweel direction of spin indicator (High = CCW, Low = CW)
-  START_POWER_K15  DIGITAL   1-Byte    3      DIN3       IN            Starter Main High Power input positive voltage (High = Start powered, Low = Starter not powered)  same as K15
+  START_POWER_K15  DIGITAL   1-Byte    3      DIN3       IN            WHEEL Main High Power input positive voltage (High = Start powered, Low = WHEEL not powered)  same as K15
   CALIBRATE        DIGITAL   NA        4      DOUT4      OUT           Calibrate analog input signals (High = calibrate, Low = normal signal inputs)
-  START_CURRENT    ANALOG    10-Bit    14     AIN0       IN            Starter Main current sense (+/- 2000 Amps)
+  START_CURRENT    ANALOG    10-Bit    14     AIN0       IN            WHEEL Main current sense (+/- 2000 Amps)
   FUEL_HTR_CURRENT ANALOG    10-Bit    15     AIN1       IN            Fuel Heater power source current (+/- 250 Amps)
-  STATER_STRAIN    ANALOG    10-Bit    16     AIN2       IN            Starter Strain Sensor
+  STATER_STRAIN    ANALOG    10-Bit    16     AIN2       IN            WHEEL Strain Sensor
 
   Algorithm (loop):
   1. After power on initialize the SD Card to check if it's there.
@@ -33,7 +33,7 @@
        START_PWR_K15,
        START_CURRENT,
        FUEL_HTR_CURRENT,
-       STARTER_STRAIN,
+       WHEEL_STRAIN,
       }
  
  The circuit:
@@ -50,10 +50,10 @@
 
 #define START_SIG                           (0)
 #define FLYWHEEL_DIR_CHANNEL                (1)
-#define STARTER_PWR_K15_CHANNEL             (3) 
-#define STARTER_CURRENT_CHANNEL             (0)
+#define WHEEL_PWR_K15_CHANNEL             (3) 
+#define WHEEL_CURRENT_CHANNEL             (0)
 #define FUEL_HTR_CURRENT_CHANNEL            (1)
-#define STARTER_STRAIN_CURRENT_CHANNEL      (2)
+#define WHEEL_STRAIN_CURRENT_CHANNEL      (2)
 #define L_COUNTER_RESET_CHANNEL             (2)
 
 #define EXTERNAL_MEM_SIZE                   (1024*1024*8)
@@ -88,7 +88,7 @@ void setup()
   // Setup Pin's
   pinMode (START_SIG, INPUT);
   pinMode (FLYWHEEL_DIR_CHANNEL, INPUT);
-  pinMode (STARTER_PWR_K15_CHANNEL, INPUT);
+  pinMode (WHEEL_PWR_K15_CHANNEL, INPUT);
   pinMode (L_COUNTER_RESET_CHANNEL, OUTPUT);
 
   // Start the counter
@@ -170,7 +170,7 @@ int StoreDataSDCard (void) {
 
   //Now write the data out to the SD Card stored in the psram
   dataFile = SD.open(filename, FILE_WRITE);
-  dataFile.println("time_usec,flywheel_count,flywheel_direction,starter_pwr_k15,starter_current,fuel_htr_current,starter_housing_strain");
+  dataFile.println("time_usec,flywheel_count,flywheel_direction,WHEEL_pwr_k15,WHEEL_current,fuel_htr_current,WHEEL_housing_strain");
   //Dump started data
   for (int i=0;i<=memptr;i++) {
     dataFile.print(psram[i]);
@@ -206,16 +206,16 @@ void loop()
      // Read the data
      unsigned long  fly_wheel_count   = read_S35770_Counter();  
      unsigned int   fly_wheel_dir     = digitalRead(FLYWHEEL_DIR_CHANNEL);
-     unsigned int   starter_pwr_k15   = digitalRead(STARTER_PWR_K15_CHANNEL);
-     unsigned int   starter_current   = analogRead(STARTER_CURRENT_CHANNEL);
+     unsigned int   WHEEL_pwr_k15   = digitalRead(WHEEL_PWR_K15_CHANNEL);
+     unsigned int   WHEEL_current   = analogRead(WHEEL_CURRENT_CHANNEL);
      unsigned int   fuel_htr_current  = analogRead(FUEL_HTR_CURRENT_CHANNEL);
-     unsigned int   starter_strain    = analogRead(STARTER_STRAIN_CURRENT_CHANNEL);
+     unsigned int   WHEEL_strain    = analogRead(WHEEL_STRAIN_CURRENT_CHANNEL);
 
      // micros() is 32bit with max value: 4,294,967,295 (2^32-1) or 10-digits
      // S-35770 is 24bit with max value: 16,777,215 (2^24-1) or 8-digits
      // fly_wheel direction is 1-digit
-     // starter_pwr_k15 is 1-digit
-     // starter_curret is 4-digits
+     // WHEEL_pwr_k15 is 1-digit
+     // WHEEL_curret is 4-digits
      // fuel_htr_curretn is 4-digits
      // strain is 4-digits
      // Total is: 1234567890,12345678,1,1,1234,1234,1234<cr><\0> give 39-digits
@@ -223,7 +223,7 @@ void loop()
      // 8MByte (1024*1024*8)/97,500 =~ 86s of psram record time
      
      // Assemble the output into comma seperated string
-     char_count = sprintf(&psram[memptr], "%.10lu,%.8lu,%u,%u,%.4u,%.4u,%.4u\n", time_usec, fly_wheel_count, fly_wheel_dir, starter_pwr_k15, starter_current, fuel_htr_current, starter_strain);
+     char_count = sprintf(&psram[memptr], "%.10lu,%.8lu,%u,%u,%.4u,%.4u,%.4u\n", time_usec, fly_wheel_count, fly_wheel_dir, WHEEL_pwr_k15, WHEEL_current, fuel_htr_current, WHEEL_strain);
      memptr = memptr + char_count;
      if ((memptr-1) > EXTERNAL_MEM_SIZE) {
        memptr = 0; // wrap around an keep recording to psram.
