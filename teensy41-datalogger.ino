@@ -1,5 +1,5 @@
 /*s
-  Starter Logger
+  Teensy 4.1 data logger
   Rev 0
   6-JUN-2022
 
